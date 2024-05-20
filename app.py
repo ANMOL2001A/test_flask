@@ -5,6 +5,12 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
+
+@app.route('/')
+def home():
+    return "Welcome to the File Upload API! Use the /upload endpoint to upload your files."
+
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
     """

@@ -59,6 +59,7 @@
                 formData.append('file', fileChunk);
                 formData.append('chunk', chunk);
                 formData.append('total_chunks', totalChunks);
+                formData.append('filename', file.name);  
 
                 const response = await fetch('/api/upload_chunk', {
                     method: 'POST',

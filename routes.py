@@ -4,10 +4,8 @@ import hashlib
 import json
 import logging
 from werkzeug.utils import secure_filename
-from helper import UploadInput 
 from flask_socketio import SocketIO, emit
 import math
-
 
 api = Blueprint('handle', __name__, url_prefix='/api')
 
@@ -52,64 +50,21 @@ def get_total_chunks():
     
     return jsonify({"total_chunks": total_chunks}), 200
 
-
 @api.route('/upload_chunk', methods=['POST'])
 def upload_file_chunk():
-    """
-    Upload a file in chunks.
-    ---
-    tags:
-      - upload
-    consumes:
-      - multipart/form-data
-    parameters:
-      - in: formData
-        name: file
-        type: file
-        required: true
-        description: The file chunk to upload.
-      - in: formData
-        name: chunk
-        type: integer
-        required: true
-        description: The chunk number being uploaded.
-      - in: formData
-        name: total_chunks
-        type: integer
-        required: true
-        description: The total number of chunks.
-    responses:
-      200:
-        description: Chunk uploaded successfully
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                message:
-                  type: string
-                  description: A success message.
-                progress:
-                  type: integer
-                  description: The current upload progress as a percentage.
-      400:
-        description: Bad request, no file part in the request
-      500:
-        description: Internal server error
-    """
-    if 'file' not in request.files or 'chunk' not in request.form or 'total_chunks' not in request.form:
+    if 'file' not in request.files or 'chunk' not in request.form or 'total_chunks' not in request.form or 'filename' not in request.form:
         app.logger.error("Missing file or chunk metadata")
         return jsonify({"error": "Missing file or chunk metadata"}), 400
 
     file_data = request.files['file']
     chunk = int(request.form['chunk'])
     total_chunks = int(request.form['total_chunks'])
+    filename = secure_filename(request.form['filename'])
 
     if file_data.filename == '':
         app.logger.error("No selected file")
         return jsonify({"error": "No selected file"}), 400
 
-    filename = secure_filename(file_data.filename)
     dataset_dir = UPLOAD_FOLDER
     if not os.path.exists(dataset_dir):
         os.makedirs(dataset_dir)
@@ -127,7 +82,6 @@ def upload_file_chunk():
     except Exception as e:
         app.logger.error(f"Error uploading chunk: {str(e)}")
         return jsonify({"error": str(e)}), 500
-    
 
 def calculate_file_hash(file_stream):
     hasher = hashlib.sha256()

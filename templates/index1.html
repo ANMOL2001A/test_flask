@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Upload with Progress</title>
+    <style>
+        #progress-bar {
+            width: 100%;
+            background-color: #f3f3f3;
+        }
+        #progress-bar-fill {
+            width: 0%;
+            height: 30px;
+            background-color: #4caf50;
+            text-align: center;
+            line-height: 30px;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>File Upload with Progress</h1>
+    <input type="file" id="file-input">
+    <button id="upload-button">Upload</button>
+    <div id="progress-bar">
+        <div id="progress-bar-fill">0%</div>
+    </div>
+
+    <script>
+        document.getElementById('upload-button').addEventListener('click', async () => {
+            const fileInput = document.getElementById('file-input');
+            if (!fileInput.files.length) {
+                alert('Please select a file.');
+                return;
+            }
+
+            const file = fileInput.files[0];
+
+            try {
+                // Step 1: Get block size
+                const blockSizeResponse = await fetch('/api/block_size');
+                const blockSizeData = await blockSizeResponse.json();
+                const blockSize = blockSizeData.block_size;
+
+                // Step 2: Get total chunks
+                const totalChunksResponse = await fetch('/api/total_chunks', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        file_size: file.size,
+                        block_size: blockSize
+                    })
+                });
+                const totalChunksData = await totalChunksResponse.json();
+                const totalChunks = totalChunksData.total_chunks;
+
+                // Step 3: Upload file
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('block_size', blockSize);
+                formData.append('total_chunks', totalChunks);
+
+                const uploadResponse = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const reader = uploadResponse.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const events = decoder.decode(value).split('\n\n');
+                    for (const event of events) {
+                        if (event.startsWith('data: ')) {
+                            const data = JSON.parse(event.slice(6));
+                            if (data.progress) {
+                                const progressBarFill = document.getElementById('progress-bar-fill');
+                                progressBarFill.style.width = `${data.progress}%`;
+                                progressBarFill.textContent = `${data.progress}%`;
+                            }
+                            if (data.message) {
+                                alert(data.message);
+                            }
+                            if (data.error) {
+                                alert('Error: ' + data.error);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+            } catch (error) {
+                alert('Error uploading file: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>

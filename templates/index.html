@@ -45,7 +45,7 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ file_size: file.size })
+                body: JSON.stringify({ file_size: file.size, block_size: blockSize })
             });
             const totalChunksData = await totalChunksResponse.json();
             const totalChunks = totalChunksData.total_chunks;
@@ -60,6 +60,7 @@
                 formData.append('chunk', chunk);
                 formData.append('total_chunks', totalChunks);
                 formData.append('filename', file.name);  
+                formData.append('block_size', blockSize);
 
                 const response = await fetch('/api/upload_chunk', {
                     method: 'POST',
